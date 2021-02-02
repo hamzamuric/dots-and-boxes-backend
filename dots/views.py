@@ -1,17 +1,13 @@
-from django.http import JsonResponse
+from django.http import JsonResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
-
-
-# TODO: ako preko trenutnog poteza moze da se dodje do necega dobrog, ne znaci da je jednako dobar kao drugi koji dolazi do iste stvari odma
-#  zbog ovoga igra dobro na dubinu 1
 
 
 @csrf_exempt
 def index(request):
     data = request.body
     data = json.loads(data)
-    difficulty = data['difficultity']
+    difficulty = data['difficulty']
     try:
         move = minimax((data['horizontalLines'], data['verticalLines']), 1, 1, None, None, None)
         print(move)
@@ -64,9 +60,12 @@ def closes_box(state, side, i, j):
 
 
 def good_for_opponent(state, side, i, j):
-    return False
+    # return False
     horizontal_lines_count = len(state[0])
     vertical_lines_count = len(state[1])
+
+    if state[side][i][j] != 0:
+        return False
 
     if side == 0:
         if i > 0:
@@ -115,19 +114,6 @@ def good_for_opponent(state, side, i, j):
     return False
 
 
-def evaluate(state, maximizing, side, i, j):
-    if is_end(state):
-        return 300 * maximizing, side, i, j
-
-    if closes_box(state, side, i, j):
-        return 50 * maximizing, side, i, j
-
-    if good_for_opponent(state, side, i, j):
-        return -100 * maximizing, side, i, j
-
-    return 10 * maximizing, side, i, j
-
-
 def is_end(state):
     for lines in state[0]:
         for line in lines:
@@ -148,38 +134,64 @@ def min_move(move1, move2):
     return move1 if move1[0] < move2[0] else move2
 
 
+def evaluate(state, maximizing, side, i, j):
+    # if is_end(state):
+    #     return 30 * maximizing, side, i, j
+
+    if closes_box(state, side, i, j):
+        return 10 * maximizing, side, i, j
+
+    if good_for_opponent(state, side, i, j):
+        return -30 * maximizing, side, i, j
+
+    return 0, side, i, j
+
+
 def minimax(state, maximizing, depth, side, i, j):
-    if depth == 0 or is_end(state):
+    if depth == 0:
         return evaluate(state, maximizing, side, i, j)
+
     if maximizing == 1:
         #            (value, side, i,    j,    move)
-        max_player = (-1000, None, None, None, None)
+        max_player = (-1000, None, None, None)
         for side, i, j in moves(copy_state(state)):
 
             is_maximizing = maximizing
             if not closes_box(state, side, i, j):
                 is_maximizing = -is_maximizing
 
+            value = evaluate(state, maximizing, side, i, j)
+
             old_state = state[side][i][j]
             state[side][i][j] = maximizing
-            player = minimax(copy_state(state), is_maximizing, depth - 1, side, i, j)
+            # player = minimax(copy_state(state), is_maximizing, depth - 1, side, i, j)
+            player = minimax(state, is_maximizing, depth - 1, side, i, j)
+            player = ((player[0] + value[0]), player[1], player[2], player[3])
             state[side][i][j] = old_state
+            if player[0] != 0:
+                print(f"{is_maximizing}\t depth={depth}, value={player}")
             max_player = max_move(max_player, player)
 
         return max_player
     else:
         #            (value, side, i,    j,    move)
-        min_player = (+1000, None, None, None, None)
+        min_player = (+1000, None, None, None)
         for side, i, j in moves(copy_state(state)):
 
             is_maximizing = maximizing
             if not closes_box(state, side, i, j):
                 is_maximizing = -is_maximizing
 
+            value = evaluate(state, maximizing, side, i, j)
+
             old_state = state[side][i][j]
             state[side][i][j] = maximizing
-            player = minimax(copy_state(state), is_maximizing, depth - 1, side, i, j)
+            # player = minimax(copy_state(state), is_maximizing, depth - 1, side, i, j)
+            player = minimax(state, is_maximizing, depth - 1, side, i, j)
+            player = ((player[0] + value[0]), player[1], player[2], player[3])
             state[side][i][j] = old_state
+            if player[0] != 0:
+                print(f"{is_maximizing}\t depth={depth}, value={player}")
             min_player = min_move(min_player, player)
 
         return min_player
