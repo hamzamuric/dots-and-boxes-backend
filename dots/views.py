@@ -1,6 +1,7 @@
 from django.http import JsonResponse, FileResponse
 from django.views.decorators.csrf import csrf_exempt
 import json
+from random import shuffle
 
 
 @csrf_exempt
@@ -18,15 +19,18 @@ def index(request):
 
 
 def moves(state):
-    # mozda bude brze ako ne generisem prvo sve horizontalne pa sve vertikalne
+    result = []
     for i, lines in enumerate(state[0]):
         for j, move in enumerate(lines):
             if move == 0:
-                yield 0, i, j
+                result.append((0, i, j))
     for i, lines in enumerate(state[1]):
         for j, move in enumerate(lines):
             if move == 0:
-                yield 1, i, j
+                result.append((1, i, j))
+
+    shuffle(result)
+    return result
 
 
 def closes_box(state, side, i, j):
@@ -52,7 +56,6 @@ def closes_box(state, side, i, j):
 
 
 def good_for_opponent(state, side, i, j):
-    # return False
     horizontal_lines_count = len(state[0])
     vertical_lines_count = len(state[1])
 
@@ -176,7 +179,3 @@ def minimax(state, maximizing, depth, side, i, j, current):
                 min_player = (player[0], side, i, j)
 
         return min_player
-
-# if player[0] != 0:
-#     print(f"{is_maximizing}\t depth={depth}, value={player}")
-# min_player = min_move(min_player, player)
